@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "source(\"data/functions.R\")\nlibraries()\n# color map\nREP_COLOR_MAP <- c(\n  \"REP1\" = \"#1f77b4\",\n  \"REP2\" = \"#ff7f0e\",\n  \"REP3\" = \"#2ca02c\",\n  \"OTHER\" = \"#dddddd\"\n)\ndata <- get.data()\nresult <- color.mapper(data, REP_COLOR_MAP,\"YEP\",\"TEXPO ENERGY\",\"AMBIT ENERGY\")\n",
+    "created" : 1495043337656.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3227734229",
+    "id" : "BAE69849",
+    "lastKnownWriteTime" : 1495047907,
+    "last_content_update" : 1495047907435,
+    "path" : "~/GITHUB/electricityViz/data/playground.R",
+    "project_path" : "data/playground.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

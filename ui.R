@@ -17,7 +17,7 @@ shinyUI(fluidPage(
             
             selectInput(inputId="tdu", label="Select TDU:", choices=choices$tdus, selected=choices$tdus[[1]]),
             selectInput(inputId="usage", label=" Select Usage:", choices=choices$usage, selected=choices$usage[[2]]),
-            checkboxGroupInput(inputId="rate_type", label="Choose Rate Types:", choices=choices$rate_types, selected=choices$rate_types[[1]]),
+            selectInput(inputId="rate_type", label="Choose Rate Types:", choices= choices$rate_types, selected=choices$rate_types[[1]]),
             hr(),
             
             selectInput(inputId="rep1", label="REP 1:", choices=choices$reps, selected=choices$reps[[1]]),
@@ -26,9 +26,9 @@ shinyUI(fluidPage(
             p(class="text-small", "(REP: Retail Electricity Provider)"),
             hr(),
             
-            checkboxGroupInput(inputId="prepaid", label="Choose Prepaid:", choices=choices$booleans, selected=choices$booleans),
-            checkboxGroupInput(inputId="tou", label="Choose Time-of-Use:", choices=choices$booleans, selected=choices$booleans),
-            checkboxGroupInput(inputId="promotion", label="Choose Promotion:", choices=choices$booleans, selected=choices$booleans),
+            selectInput(inputId="prepaid", label="Choose Prepaid:", choices=choices$booleans, selected="ALL"),
+            selectInput(inputId="tou", label="Choose Time-of-Use:", choices=choices$booleans, selected="ALL"),
+            selectInput(inputId="promotion", label="Choose Promotion:", choices=choices$booleans, selected="ALL"),
             sliderInput(inputId="term_lengths", label="Filter Term Length:", min=0, max=36, value=c(0, 36)),
             sliderInput(inputId="renewables", label="Filter Renewable:", min=0, max=100, value=c(0, 100)),
             hr(),
@@ -50,7 +50,7 @@ shinyUI(fluidPage(
                          
                          h3("Rankings Plot"),
                          p(class="text-small", "Rankings of products at a given price range and associated variables. "),
-                         ggvisOutput("rankings_plot"),
+                         plotlyOutput("rankings_plot"),
                          hr()
                 ),
                 tabPanel("Market",
@@ -61,13 +61,15 @@ shinyUI(fluidPage(
                          
                          h3("Market Histogram"),
                          p(class="text-small", "Histogram of products at a given price range and binwidth, highlighting selected REPs in the market."),
-                         ggvisOutput("market_histogram"),
+                         # ggvisOutput("market_histogram"),
                          div(class="row offset1", uiOutput("market_histogram_slider")),
                          hr(),
                          
                          h3("Market scatterplot"),
                          p(class="text-small", "Scatterplot of products at a given price range, highlighting selected REPs in the market."),
-                         ggvisOutput("market_scatterplot"),
+                         p(class="text-small-italic", "Hover on points for details info."),
+                         # ggvisOutput("market_scatterplot"),
+                         plotlyOutput("market_scatterplot", width = "auto", height="auto"),
                          hr()
                 ),
                 tabPanel("Data",

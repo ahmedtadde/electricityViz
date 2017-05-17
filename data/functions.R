@@ -8,7 +8,8 @@ libraries <- function(){
   library(data.table)
   library(dplyr)
   library(shiny)
-  library(ggvis)
+  library(plotly)
+  # library(ggvis)
   library(scales)
   library(DT)
   library(markdown)
@@ -16,7 +17,7 @@ libraries <- function(){
 }
 
 
-
+`%notin%` <-  Negate(`%in%`)
 
 # =========================================================================
 # function:  color.mapper
@@ -24,19 +25,27 @@ libraries <- function(){
 # @return: 
 # =========================================================================
 
-color.mapper <- function(vector, map, input1,input2,input3){
+color.mapper <- function(data, map, input1,input2,input3){
   
-  mapper <- function(x){
-    switch(
-      x,
-      input1= map[1],
-      input2= map[2],
-      input3= map[3],
-      map[4]
-    )
+  result <- rep("", length(unique(data$REP)))
+  names(result) <- sort(unique(data$REP))
+  
+  result <- foreach(i = 1:length(result), .combine = c) %do% {
+    if(setequal(names(result)[i], input1)){
+      result[i] <- unname(map)[1]
+    }else if(setequal(names(result)[i], input2)){
+      result[i] <- unname(map)[2]
+    }else if(setequal(names(result)[i], input3)){
+      result[i] <- unname(map[3])
+    }else{
+      result[i] <- unname(map[4])
+    }
+    
   }
   
-  return(foreach(i = 1:length(vector), .combine = c) %do% {mapper(vector[i])})
+  names(result) <- sort(unique(data$REP))
+  return(result)
+  
 }
 
 # =========================================================================
@@ -68,13 +77,10 @@ clean.data <- function(df){
        
       ][,
         # convert units from $/kWh to c/kWh
-        c("KWH500","KWH1000","KWH2000","PREPAID","TOU","PROMOTION") := list(
+        c("KWH500","KWH1000","KWH2000") := list(
             as.numeric(KWH500) * 100,
             as.numeric(KWH1000) * 100,
-            as.numeric(KWH2000) * 100,
-            as.logical(PREPAID),
-            as.logical(TOU),
-            as.logical(PROMOTION)
+            as.numeric(KWH2000) * 100
           )
       ]
   )
@@ -91,7 +97,14 @@ get.data <- function(update = NULL) {
 
   if(is.null(update)){
     
-    return(setkey(fread("./data/data.csv"), ID))
+    return(setkey(fread("./data/data.csv")[, c("PREPAID","TOU","PROMOTION"):=
+                                             list(toupper(as.character(PREPAID)),
+                                                  toupper(as.character(TOU)),
+                                                  toupper(as.character(PROMOTION))
+                                                  )
+                                          ], ID
+                  )
+           )
     
   }else{
     
@@ -108,7 +121,14 @@ get.data <- function(update = NULL) {
         
         fwrite(file="./data/data.csv")
         
-        return(setkey(fread("./data/data.csv"), ID))
+    return(setkey(fread("./data/data.csv")[, c("PREPAID","TOU","PROMOTION"):=
+                                             list(toupper(as.character(PREPAID)),
+                                                  toupper(as.character(TOU)),
+                                                  toupper(as.character(PROMOTION))
+                                                  )
+                                          ], ID
+                  )
+           )
   }
 }
 

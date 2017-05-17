@@ -12,7 +12,7 @@ choices <- list(
     tdus = unique(df_base$TDU),
     reps = unique(df_base$REP),
     rate_types = unique(df_base$RATE_TYPE),
-    booleans = c(TRUE, FALSE),
+    booleans = c("ALL","TRUE","FALSE"),
     usage = c("KWH500", "KWH1000", "KWH2000")
 )
 
@@ -31,8 +31,8 @@ choices <- list(
 
 # color map
 REP_COLOR_MAP <- c(
-    "REP1" = "#ff9800",
-    "REP2" = "#72142e",
-    "REP3" = "#0f2a56",
-    "OTHER" = "gray85"
+  "REP1" = "#1f77b4",
+  "REP2" = "#ff7f0e",
+  "REP3" = "#2ca02c",
+  "OTHER" = "#dddddd"
 )

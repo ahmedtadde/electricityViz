@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : " source(\"data/functions.R\")\nlibraries()\n\n\n# get base DF\ndf_base <- get.data()\n\n\n# ui.R variables\n# -------------------------------------\nchoices <- list(\n    tdus = unique(df_base$TDU),\n    reps = unique(df_base$REP),\n    rate_types = unique(df_base$RATE_TYPE),\n    booleans = c(\"ALL\",\"TRUE\",\"FALSE\"),\n    usage = c(\"KWH500\", \"KWH1000\", \"KWH2000\")\n)\n\n\n# # server.R variables and functions\n# # -------------------------------------\n# # histogram_tooltip helper function\n# histogram_tooltip <- function(data) {\n#     if(is.null(data)) return(NULL)\n#     sprintf(\"Price: %s - %s c/kWh<br />\n#             Count: %s<br />\",\n#             round(data$xmin, 1), round(data$xmax, 1),\n#             data$stack_upr - data$stack_lwr)\n# }\n\n\n# color map\nREP_COLOR_MAP <- c(\n  \"REP1\" = \"#1f77b4\",\n  \"REP2\" = \"#ff7f0e\",\n  \"REP3\" = \"#2ca02c\",\n  \"OTHER\" = \"#dddddd\"\n)",
+    "created" : 1495044288519.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "128921897",
+    "id" : "C0427815",
+    "lastKnownWriteTime" : 1495050560,
+    "last_content_update" : 1495050560039,
+    "path" : "~/GITHUB/electricityViz/global.R",
+    "project_path" : "global.R",
+    "properties" : {
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

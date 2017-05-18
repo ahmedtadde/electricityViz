@@ -7,5 +7,10 @@ REP_COLOR_MAP <- c(
   "REP3" = "#2ca02c",
   "OTHER" = "#dddddd"
 )
-data <- get.data()
-result <- color.mapper(data, REP_COLOR_MAP,"YEP","TEXPO ENERGY","AMBIT ENERGY")
+# data <- get.data()
+# data[, COLORMAP:= color.mapper(data, REP_COLOR_MAP,"YEP","TEXPO ENERGY","AMBIT ENERGY", mode = "all")]
+
+test <- data[, .(COLORMAP,KWH500), by = list(REP,PRODUCT)][, PRODUCTTAG:= paste0(PRODUCT," (",REP,")")]
+colors <- test[, unique(COLORMAP), by =PRODUCTTAG]
+color.map <- colors[, V1]
+names(color.map) <- colors[,PRODUCTTAG]

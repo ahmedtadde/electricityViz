@@ -25,10 +25,15 @@ libraries <- function(){
 # @return: 
 # =========================================================================
 
-color.mapper <- function(data, map, input1,input2,input3){
+color.mapper <- function(data, map, input1,input2,input3, mode = "unique"){
   
-  result <- rep("", length(unique(data$REP)))
-  names(result) <- sort(unique(data$REP))
+  if (mode %in% "unique"){
+    result <- rep("", length(unique(data$REP)))
+    names(result) <- sort(unique(data$REP))
+  }else{
+    result <- rep("dummy", length(data$REP))
+    names(result) <- data$REP
+  }
   
   result <- foreach(i = 1:length(result), .combine = c) %do% {
     if(setequal(names(result)[i], input1)){
@@ -43,7 +48,12 @@ color.mapper <- function(data, map, input1,input2,input3){
     
   }
   
-  names(result) <- sort(unique(data$REP))
+  if (mode %in% "unique"){
+    names(result) <- sort(unique(data$REP))
+  }else{
+    names(result) <- data$REP
+  }
+  
   return(result)
   
 }

@@ -26,8 +26,7 @@ shinyServer(function(input, output) {
                     TERM_LENGTH <= input$term_lengths[2] &
                     RENEWABLE >= input$renewables[1] &
                     RENEWABLE <= input$renewables[2]
-                  ] -> df
-      
+                  ]-> df
       if( is.null(df) | dim(df)[1] == 0 | !is.data.table(df)) return(NULL)
       
       
@@ -46,7 +45,9 @@ shinyServer(function(input, output) {
       if (!is.data.table(resource.df())) return(NULL)
       
       datatable(
+
         resource.df(),
+
         filter = 'top',
         rownames = FALSE,
         selection="multiple", 
@@ -110,7 +111,7 @@ shinyServer(function(input, output) {
     output$rankings_plot <- renderPlotly({
       
       if(is.null(resource.df()) | !is.data.table(resource.df())) return(NULL)
-      color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3)
+      # color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3)
       
       ax <- list(
         title = "PRICE",
@@ -132,17 +133,29 @@ shinyServer(function(input, output) {
         ),
         zeroline = FALSE,
         showline = FALSE,
-        showticklabels = TRUE,
+        showticklabels = FALSE,
         showgrid = FALSE
         
       )
       
-      plot_ly(data = copy(resource.df())[, REP:= factor(REP, levels = sort(unique(REP)))], 
+      
+
+      df<- copy(resource.df())[, PRODUCTTAG:= paste0(PRODUCT," (",REP,")")
+                              ][, COLORMAP:= unname(color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3, mode = ""))
+                              ]
+      
+      colors <- df[, unique(COLORMAP), by =PRODUCTTAG]
+      color.map <- colors[, V1]
+      names(color.map) <- colors[,PRODUCTTAG]
+      
+      
+      
+      plot_ly(data = df[, PRODUCTTAG := factor(PRODUCTTAG, levels = unique(PRODUCTTAG))], 
               x = ~PRICE,
               y = ~REP,
               mode = 'markers',
               type = 'scatter', 
-              color = ~REP,
+              color = ~PRODUCTTAG,
               colors = color.map,
               hoverinfo = 'text',
               text = ~paste0(
@@ -168,6 +181,7 @@ shinyServer(function(input, output) {
 
     
     
+
     #================================ market_histogram plotly output
     # resource.df %>%
     #   ggvis(x=~PRICE, fill:=~REP_COLOR) %>%
@@ -184,7 +198,7 @@ shinyServer(function(input, output) {
     output$market_scatterplot <- renderPlotly({
       
       if(is.null(resource.df()) | !is.data.table(resource.df())) return(NULL)
-      color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3)
+      color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3, mode = "unique")
        
       ax <- list(
         title = "PRICE",
@@ -238,4 +252,37 @@ shinyServer(function(input, output) {
     #   hide_legend("stroke") %>%
     #   add_tooltip(tooltip_helper, "hover") %>%
     #   bind_shiny("market_scatterplot")
+
+    # rankings_plot ggvis output
+    # fill:=~REP_COLOR
+    # resource.df %>% 
+    #     ggvis(x=~PRICE, y=~REP, size=~TERM_LENGTH, stroke="lightsteelblue", key:=~ID) %>% 
+    #     layer_points() %>%
+    #     add_axis("x", subdivide=4) %>%
+    #     add_axis("y", title="") %>%
+    #     hide_legend("stroke") %>%
+    #     add_tooltip(tooltip_helper, "hover") %>%
+    #     bind_shiny("rankings_plot")
+    
+    # market_histogram ggvis output
+    # fill:=~REP_COLOR
+    # resource.df %>% 
+    #     ggvis(x=~PRICE, stroke="lightsteelblue") %>% 
+    #     group_by(REP_COLOR) %>%
+    #     layer_histograms(width=input_slider(label="Binwidth", min=0.1, max=2, value=0.2, step=0.1)) %>% 
+    #     add_axis("x", subdivide=4) %>%
+    #     hide_legend("stroke") %>%
+    #     add_tooltip(histogram_tooltip, "hover") %>%
+    #     bind_shiny("market_histogram", "market_histogram_slider")
+    
+    # market_scatterplot ggvis output
+    # fill:=~REP_COLOR
+    # resource.df %>% 
+    #     ggvis(x=~PRICE, y=~TERM_LENGTH, size:=50, stroke="lightsteelblue", key:=~ID) %>% 
+    #     layer_points() %>% 
+    #     add_axis("x", subdivide=4) %>%
+    #     hide_legend("stroke") %>%
+    #     add_tooltip(tooltip_helper, "hover") %>%
+    #     bind_shiny("market_scatterplot")
+
 })

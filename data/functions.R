@@ -6,10 +6,9 @@
 libraries <- function(){
   library(magrittr)
   library(data.table)
-  library(dplyr)
+  # library(dplyr)
   library(shiny)
-  library(plotly)
-  # library(ggvis)
+  library(ggvis)
   library(scales)
   library(DT)
   library(markdown)
@@ -21,8 +20,8 @@ libraries <- function(){
 
 # =========================================================================
 # function:  color.mapper
-# @description: 
-# @return: 
+# @description: matches the REP variable with a given color
+# @return: a named vector of assinged color; names are the corresponding REP values
 # =========================================================================
 
 color.mapper <- function(data, map, input1,input2,input3, mode = "unique"){
@@ -146,11 +145,28 @@ get.data <- function(update = NULL) {
 
 # server.R variables and functions
 # -------------------------------------
-# histogram_tooltip helper function
+# histogram_tooltip helper function for histogram plot
 histogram_tooltip <- function(data) {
   if(is.null(data)) return(NULL)
   sprintf("Price: %s - %s c/kWh<br />
           Count: %s<br />",
           round(data$xmin, 1), round(data$xmax, 1),
           data$stack_upr - data$stack_lwr)
+}
+
+
+# helper function helper function for scatter and rankings plots
+tooltip_helper <- function(df, data) {
+  sprintf("<b class='text-warning'><i>%s</i></b><br />
+          <b>REP:</b> %s<br />
+          <b>RANK:</b> #%s<br />
+          <b>PRICE:</b> %sc/kWh<br />
+          <b>TERM:</b> %sM<br />
+          <b>PROMOTION:</b> %s<br />",
+          df$PRODUCT[df$ID == data$ID],
+          df$REP[df$ID == data$ID],
+          df$RANK[df$ID == data$ID],
+          df$PRICE[df$ID == data$ID],
+          df$TERM_LENGTH[df$ID == data$ID],
+          df$PROMOTION[df$ID == data$ID])
 }

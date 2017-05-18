@@ -2,10 +2,9 @@
 
 ## [Interactive Project Link][]
 
-This is a data analysis writeup (as of 02/09/14) for the R [Shiny][] application - **Power to Choose (PTC)**, built to
-visualize *up-to-date* electricity plans and prices in the [ERCOT][] utility market.
+This is a data analysis writeup (as of 10/09/15) for the R [Shiny][] application - **Power to Choose (PTC)**, built to visualize *up-to-date* electricity plans and prices in the [ERCOT][] utility market.
 
-The project is hosted on an AWS EC2 instance and all code and implementation is open-source and made available on 
+The project is hosted on an [Shinyapps][] and all code and implementation are available on 
 [Github][github].
 
 ------
@@ -193,37 +192,75 @@ For the remainder of the data walkthrough, we will work with files in the [Githu
 But first, let's scrape the data!
 
 ### Data Scraping
-Open the `/data/data.R` file and let's build a quick function for pulling the data from the URL:
+Open the `/data/functions.R` file and let's build a function for pulling the data from the URL:
 
 ```R
-# get_df helper function
-get_df <- function() {
-    # Get raw dataframe
-    #
-    # @return: raw dataframe returned by read.csv from provided url.
+# =========================================================================
+# function get.data
+#
+# @description: get data from url or csv file saved in repository (for faster data loading)
+# @return: cleaned data ready for use by objects in server.R file.
+# =========================================================================
+get.data <- function(update = NULL) {
+
+  if(is.null(update)){
     
-    url <- "http://www.powertochoose.org/en-us/Plan/ExportToCsv"
-    df <- read.csv(file=url, header=TRUE, stringsAsFactors=FALSE)
-    df <- clean(df)
+    return(setkey(fread("./data/data.csv")[, c("PREPAID","TOU","PROMOTION"):=
+                                             list(toupper(as.character(PREPAID)),
+                                                  toupper(as.character(TOU)),
+                                                  toupper(as.character(PROMOTION))
+                                                  )
+                                          ], ID
+                  )
+           )
+    
+  }else{
+    
+    if(update %in% c("update", "Update","yes","Yes","new","New"))
+      
+      "http://www.powertochoose.org/en-us/Plan/ExportToCsv" %>% 
+        
+        fread(
+          header=TRUE, 
+          stringsAsFactors=FALSE
+        ) %>% 
+        
+        clean.data() %>%
+        
+        fwrite(file="./data/data.csv")
+        
+    return(setkey(fread("./data/data.csv")[, c("PREPAID","TOU","PROMOTION"):=
+                                             list(toupper(as.character(PREPAID)),
+                                                  toupper(as.character(TOU)),
+                                                  toupper(as.character(PROMOTION))
+                                                  )
+                                          ], ID
+                  )
+           )
+  }
 }
 ```
 
 We can now call and store the results of `get_df` into a dataframe by:
 
 ```R
-df = get_df()
+# As defined above, a value of NULL for update means that 
+# we want the APP to use the data version available as a 
+# csv File in the data repository. Any other string passed
+# to update will instead download the data straight
+# from the site.
+
+df = get_df(update = NULL )
 ```
 
 At this point, the data that we read in has native column headers and wrong data types (most of them are converted to
 `string` when we used the `stringsAsFactors=FALSE` to avoid conversions to the "difficult-to-deal-with" `factors` object type
 in R).
 
-We now tidy the dataframe `df` using Hadley Wickham's awesome [dplyr][] library for very clean execution of R data
-manipulations written in concise and readable syntax.
+We now tidy the data `df` the data.table way. While the syntax of [datatable][]  isn't as readable as [dplyr][],
+it's speed and simplicity of data manipulations is a great asset for any data wrangling task.
 
->   The rest of the data section assumes elementary knowledge of dplyr. We assume familiarity with methods such as: `%>%`,
->   `mutate`, `select`, `arrange`, `rename`. Please check out the official `dplyr` [official guide][dplyr] if you need
->   additional resources.
+>   The rest of the data section assumes some knowledge of data.table and pipeline processing using the  `%>%` operator. Please check out this  `data.table` [cheatsheet][] to assist in following the code.
 
 ### Data Munging
 We will abstract most of the cleaning logic in the function `clean`
@@ -231,50 +268,53 @@ We will abstract most of the cleaning logic in the function `clean`
 The implementation for `clean` is provided below and we'll expalin the major workflow below:
 
 ```R
-# clean helper function
-clean <- function(df) {
-    # Clean raw dataframe
-    # Rename dataframe columns and define types.  Keep some columns
-    #
-    # @df: raw dataframe from raw_df()
-    # @return: cleaned dataframe with some columns kept
+# =========================================================================
+# function:  clean.data
+# @description: Renaming data.table columns, subset and define the types of columns 
+#               of interest
+# @return: cleaned data.table
+# =========================================================================
+clean.data <- function(df){
+  columns <- c("ID", "TDU", "REP", "PRODUCT",
+               "KWH500", "KWH1000", "KWH2000",
+               "FEES", "PREPAID", "TOU",
+               "FIXED", "RATE_TYPE", "RENEWABLE",
+               "TERM_LENGTH", "CANCEL_FEE", "WEdBSITE",
+               "TERMS", "TERMS_URL", "PROMOTION", "PROMOTION_DESCRIPTION",
+               "EFL_URL", "ENROLL_URL", "PREPAID_URL", "ENROLL_PHONE"
+              )
+  
+  setnames(df, names(df)[1:24],  columns)  # rename columns
+  rm(columns)
+  
+  return(
     
-    columns <- c("ID", "TDU", "REP", "PRODUCT",
-                 "KWH500", "KWH1000", "KWH2000",
-                 "FEES", "PREPAID", "TOU",
-                 "FIXED", "RATE_TYPE", "RENEWABLE",
-                 "TERM_LENGTH", "CANCEL_FEE", "WEdBSITE",
-                 "TERMS", "TERMS_URL", "PROMOTION", "PROMOTION_DESCRIPTION",
-                 "EFL_URL", "ENROLL_URL", "PREPAID_URL", "ENROLL_PHONE")
-    colnames(df) <- columns  # rename columns
-    
-    df <- df %>%  # mutate df using the amazing dplyr
-        select(ID, TDU, REP, PRODUCT,
-               KWH500, KWH1000, KWH2000,
-               RATE_TYPE, TERM_LENGTH, RENEWABLE,
-               PREPAID, TOU, PROMOTION, EFL_URL) %>%
-        mutate(KWH500 = KWH500 * 100,  # convert units from $/kWh to c/kWh
-               KWH1000 = KWH1000 * 100,
-               KWH2000 = KWH2000 * 100,
-               PREPAID = as.logical(PREPAID),
-               TOU = as.logical(TOU),
-               PROMOTION = as.logical(PROMOTION))
-    
-    df <- na.omit(df)  # Remove NA records
-    return(df)
+    df[, .(ID, TDU, REP, PRODUCT,
+           KWH500, KWH1000, KWH2000,
+           RATE_TYPE, TERM_LENGTH, RENEWABLE,
+           PREPAID, TOU, PROMOTION, EFL_URL
+           ) 
+       
+      ][,
+        # convert units from $/kWh to c/kWh
+        c("KWH500","KWH1000","KWH2000") := list(
+            as.numeric(KWH500) * 100,
+            as.numeric(KWH1000) * 100,
+            as.numeric(KWH2000) * 100
+          )
+      ]
+  )
 }
 ```
 
 -   Create a vector `columns` to be used to rename the native column headers in `df`.
--   Use `dplyr`'s `select` to project only the required columns (similar to `SQL select`).
+-   Only select the required columns (similar to `SQL select`).
 -   Change and calculate existing columns to new calculated values using `mutate`
     -   Convert pricing units from $/kWh to c/kWh
-    -   Convert `PREPAID`, `TOU`, `PREPAID` columns to `logical` datatypes
--   Remove all rows with `NA` values using `na.omit(df)`
 
-Our dataframe `df` is now nicely organized with well-named headers, and we can now load this into our `shiny` application
-through `global.R` (calling it once).  In `server.R`, there are a lot more dataframe manipulations used to generate unique
-visualizations, but the basis for these manipulations depend on the dataframe that we have organized cleanly in this step.
+Our data `df` is now nicely organized with well-named headers, and we can now load this into our `shiny` application
+through `global.R` (calling it once).  In `server.R`, there are a lot more data manipulations used to generate unique
+visualizations, but the basis for these manipulations depend on the data that we have organized cleanly in this step.
 
 For a sneak peek, our cleaned `df` now looks like this:
 
@@ -291,22 +331,28 @@ And that's all to the data lifecycle section of the guide!
 -   [PUC][]
 -   [ERCOT][]
 -   [Shiny][]
+-   [datatable][]
 -   [dplyr][]
--   [Shiny EC2 Bootstrap Guide][]
+-   [Shinyapps][]
+-   [cheatsheet][]
 
 <sub>(back to [contents](#contents))</sub>
 
 ------
 
 <!-- external links -->
-[interactive project link]: http://shiny.vis.datanaut.io/PowerToChoose/
+
+[interactive project link]: https://ahmedtadde.shinyapps.io/electricityviz/
 [ERCOT]: http://www.ercot.com/
 [Power to Choose]: http://www.powertochoose.org/
 [PUC]: https://www.puc.texas.gov/
 [Shiny]: http://shiny.rstudio.com/
-[github]: https://github.com/chrisrzhou/RShiny-PowerToChoose
+[github]: https://github.com/ahmedtadde/elctricityViz
 [dplyr]: http://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html
-[Shiny EC2 Bootstrap Guide]: https://github.com/chrisrzhou/RShiny-EC2Bootstrap
+[datatable]: https://github.com/Rdatatable/data.table/wiki
+[Shinyapps]: https://www.shinyapps.io/
+[cheatsheet]: https://s3.amazonaws.com/assets.datacamp.com/img/blog/data+table+cheat+sheet.pdf
+
 
 <!-- images link -->
 [image-native]: https://s3-us-west-1.amazonaws.com/chrisrzhou/github/RShiny-PowerToChoose/native.png

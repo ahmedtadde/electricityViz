@@ -1,6 +1,4 @@
 shinyServer(function(input, output) {
-    
-    # Reactive resources
     # --------------------------------
     # dataframe resource
     resource.df <- reactive({
@@ -18,19 +16,16 @@ shinyServer(function(input, output) {
                     PREPAID %in% prepaid &
                     TOU %in% tou &
                     PROMOTION %in% promotion &
-                    PRICE <= 25 &
-                    PRICE >= 1 &  # filter out unreasonable data
-                    TDU == input$tdu &
+                    PRICE %between% list(1,25) & # filter out unreasonable prices
+                    TDU %in% input$tdu &
                     RATE_TYPE %in% input$rate_type &
-                    TERM_LENGTH >= input$term_lengths[1] &
-                    TERM_LENGTH <= input$term_lengths[2] &
-                    RENEWABLE >= input$renewables[1] &
-                    RENEWABLE <= input$renewables[2]
+                    TERM_LENGTH  %between% list(input$term_lengths[1], input$term_lengths[2]) &
+                    RENEWABLE  %between% list(input$renewables[1], input$renewables[2])
                   ]-> df
       if( is.null(df) | dim(df)[1] == 0 | !is.data.table(df)) return(NULL)
       
-      
-      df[,RANK := min_rank(PRICE)]
+      df[,RANK := frank(PRICE,ties.method = "min")
+         ][, REP_COLOR:= color.mapper(df,REP_COLOR_MAP,input$rep1,input$rep2,input$rep3, "all")]
       
       return(setorder(df, RANK))
     })
@@ -107,182 +102,61 @@ shinyServer(function(input, output) {
         return(summary)
     })
     
-    # rankings_plot plotly output
-    output$rankings_plot <- renderPlotly({
-      
-      if(is.null(resource.df()) | !is.data.table(resource.df())) return(NULL)
-      # color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3)
-      
-      ax <- list(
-        title = "PRICE",
-        titlefont= list(
-          family = "Courier New, monospace",
-          size = 17
-        ),
-        zeroline = FALSE,
-        showline = FALSE,
-        showticklabels = TRUE,
-        showgrid = FALSE
-      )
-      
-      ay <- list(
-        title = "Retail Electric Provide (REP)",
-        titlefont= list(
-          family = "Courier New, monospace",
-          size = 17
-        ),
-        zeroline = FALSE,
-        showline = FALSE,
-        showticklabels = FALSE,
-        showgrid = FALSE
-        
-      )
-      
-      
-
-      df<- copy(resource.df())[, PRODUCTTAG:= paste0(PRODUCT," (",REP,")")
-                              ][, COLORMAP:= unname(color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3, mode = ""))
-                              ]
-      
-      colors <- df[, unique(COLORMAP), by =PRODUCTTAG]
-      color.map <- colors[, V1]
-      names(color.map) <- colors[,PRODUCTTAG]
-      
-      
-      
-      plot_ly(data = df[, PRODUCTTAG := factor(PRODUCTTAG, levels = unique(PRODUCTTAG))], 
-              x = ~PRICE,
-              y = ~REP,
-              mode = 'markers',
-              type = 'scatter', 
-              color = ~PRODUCTTAG,
-              colors = color.map,
-              hoverinfo = 'text',
-              text = ~paste0(
-                '</br> Product: ', PRODUCT,
-                '</br> Price: $', PRICE,
-                '</br> Rank: ', RANK,
-                '</br> Rate Type: ', RATE_TYPE,
-                '</br> Term length: ', TERM_LENGTH,
-                '</br> Retail Electric Provide (REP): ', REP,
-                '</br> Transmission and Distribution Service Provider (TDU): ', TDU
-              )
-      )%>%
-        layout(xaxis = ax, yaxis = ay) #showlegend = FALSE
-    })
-    # resource.df %>%
-    #   ggvis(x=~PRICE, y=~REP, size=~TERM_LENGTH, fill:=~REP_COLOR, key:=~ID) %>%
-    #   layer_points() %>%
-    #   add_axis("x", subdivide=4) %>%
-    #   add_axis("y", title="") %>%
-    #   hide_legend("stroke") %>%
-    #   add_tooltip(tooltip_helper, "hover") %>%
-    #   bind_shiny("rankings_plot")
-
     
+    # ggvis outputs
+    # --------------------------------
+    # ggvis tooltip helper
+    tooltip_helper <- function(data) {
+      df = resource.df()
+      sprintf("<b class='text-warning'><i>%s</i></b><br />
+              <b>REP:</b> %s<br />
+              <b>RANK:</b> #%s<br />
+              <b>PRICE:</b> %sc/kWh<br />
+              <b>TERM:</b> %sM<br />
+              <b>PROMOTION:</b> %s<br />",
+              df$PRODUCT[df$ID == data$ID],
+              df$REP[df$ID == data$ID],
+              df$RANK[df$ID == data$ID],
+              df$PRICE[df$ID == data$ID],
+              df$TERM_LENGTH[df$ID == data$ID],
+              df$PROMOTION[df$ID == data$ID])
+    }
     
-
-    #================================ market_histogram plotly output
-    # resource.df %>%
-    #   ggvis(x=~PRICE, fill:=~REP_COLOR) %>%
-    #   group_by(REP_COLOR) %>%
-    #   layer_histograms(width=input_slider(label="Binwidth", min=0.1, max=2, value=0.2, step=0.1)) %>%
-    #   add_axis("x", subdivide=4) %>%
-    #   hide_legend("stroke") %>%
-    #   add_tooltip(histogram_tooltip, "hover") %>%
-    #   bind_shiny("market_histogram", "market_histogram_slider")
-
-    
-    
-    #================================ market_scatterplot plotly output
-    output$market_scatterplot <- renderPlotly({
-      
-      if(is.null(resource.df()) | !is.data.table(resource.df())) return(NULL)
-      color.map <- color.mapper(resource.df(), REP_COLOR_MAP, input$rep1,input$rep2,input$rep3, mode = "unique")
-       
-      ax <- list(
-        title = "PRICE",
-        titlefont= list(
-          family = "Courier New, monospace",
-          size = 17
-        ),
-        zeroline = FALSE,
-        showline = FALSE,
-        showticklabels = TRUE,
-        showgrid = FALSE
-      )
-      
-      ay <- list(
-        title = "Lenght Term",
-        titlefont= list(
-          family = "Courier New, monospace",
-          size = 17
-        ),
-        zeroline = FALSE,
-        showline = FALSE,
-        showticklabels = TRUE,
-        showgrid = FALSE
-        
-      )
-      
-      plot_ly(data = copy(resource.df())[, REP:= factor(REP, levels = sort(unique(REP)))], 
-              x = ~PRICE,
-              y = ~TERM_LENGTH,
-              mode = 'markers',
-              type = 'scatter', 
-              color = ~REP,
-              colors = color.map,
-              hoverinfo = 'text',
-              text = ~paste0(
-                '</br> Price: $', PRICE,
-                '</br> Product: ', PRODUCT,
-                '</br> Rate Type: ', RATE_TYPE,
-                '</br> Term length: ', TERM_LENGTH,
-                '</br> Retail Electric Provide (REP): ', REP,
-                '</br> Transmission and Distribution Service Provider (TDU): ', TDU
-                )
-              )%>%
-        layout(xaxis = ax, yaxis = ay, showlegend = FALSE)
-    })
-    
-    # resource.df %>%
-    #   ggvis(x=~PRICE, y=~TERM_LENGTH, size:=50, fill:=~REP_COLOR, key:=~ID) %>%
-    #   layer_points() %>%
-    #   add_axis("x", subdivide=4) %>%
-    #   hide_legend("stroke") %>%
-    #   add_tooltip(tooltip_helper, "hover") %>%
-    #   bind_shiny("market_scatterplot")
-
     # rankings_plot ggvis output
-    # fill:=~REP_COLOR
-    # resource.df %>% 
-    #     ggvis(x=~PRICE, y=~REP, size=~TERM_LENGTH, stroke="lightsteelblue", key:=~ID) %>% 
-    #     layer_points() %>%
-    #     add_axis("x", subdivide=4) %>%
-    #     add_axis("y", title="") %>%
-    #     hide_legend("stroke") %>%
-    #     add_tooltip(tooltip_helper, "hover") %>%
-    #     bind_shiny("rankings_plot")
+    if(!is.null(resource.df)){
+    resource.df %>% 
+      ggvis(x=~PRICE, y=~REP, size=~TERM_LENGTH, fill:=~REP_COLOR, stroke="lightsteelblue", key:=~ID) %>% 
+      layer_points() %>% set_options(height = 600, width = 1100) %>%
+      add_axis("x", subdivide=5) %>%
+      add_axis("y", title="") %>%
+      hide_legend("stroke") %>%
+      add_tooltip(tooltip_helper, "hover") %>%
+      bind_shiny("rankings_plot")
+    }
+    
     
     # market_histogram ggvis output
-    # fill:=~REP_COLOR
-    # resource.df %>% 
-    #     ggvis(x=~PRICE, stroke="lightsteelblue") %>% 
-    #     group_by(REP_COLOR) %>%
-    #     layer_histograms(width=input_slider(label="Binwidth", min=0.1, max=2, value=0.2, step=0.1)) %>% 
-    #     add_axis("x", subdivide=4) %>%
-    #     hide_legend("stroke") %>%
-    #     add_tooltip(histogram_tooltip, "hover") %>%
-    #     bind_shiny("market_histogram", "market_histogram_slider")
+    if(!is.null(resource.df)){
+      resource.df %>%
+        ggvis(x=~PRICE, fill:=~REP_COLOR, stroke="lightsteelblue") %>%
+        set_options(height = 600, width = 1100) %>%
+        group_by(REP_COLOR) %>%
+        layer_histograms(width=input_slider(label="Binwidth", min=0.1, max=2, value=0.2, step=0.1)) %>%
+        add_axis("x", subdivide=5) %>%
+        hide_legend("stroke") %>%
+        add_tooltip(histogram_tooltip, "hover") %>%
+        bind_shiny("market_histogram", "market_histogram_slider")
+    }
+    
     
     # market_scatterplot ggvis output
-    # fill:=~REP_COLOR
-    # resource.df %>% 
-    #     ggvis(x=~PRICE, y=~TERM_LENGTH, size:=50, stroke="lightsteelblue", key:=~ID) %>% 
-    #     layer_points() %>% 
-    #     add_axis("x", subdivide=4) %>%
-    #     hide_legend("stroke") %>%
-    #     add_tooltip(tooltip_helper, "hover") %>%
-    #     bind_shiny("market_scatterplot")
-
+    if(!is.null(resource.df)){
+    resource.df %>%
+      ggvis(x=~PRICE, y=~TERM_LENGTH, size:=50, fill:=~REP_COLOR, stroke="lightsteelblue", key:=~ID) %>%
+      layer_points() %>% set_options(height = 600, width = 1100) %>%
+      add_axis("x", subdivide=5) %>%
+      hide_legend("stroke") %>%
+      add_tooltip(tooltip_helper, "hover") %>%
+      bind_shiny("market_scatterplot")
+    }
 })

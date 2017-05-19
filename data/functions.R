@@ -6,7 +6,6 @@
 libraries <- function(){
   library(magrittr)
   library(data.table)
-  # library(dplyr)
   library(shiny)
   library(ggvis)
   library(scales)

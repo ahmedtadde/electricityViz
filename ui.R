@@ -40,7 +40,7 @@ shinyUI(fluidPage(
             tabPanel("Rankings",
                      h2("Rankings"),
                      p(class="text-small-italic", "At times, a programming bug will stop 
-                        the App's processing and the screen turns grey. This mean your inputs did match any data records.
+                        the App's processing and the screen turns grey. This mean your inputs did not match any data records.
                         The weak binding logic between Shiny and the visualization package GGVIS means that 
                         the former isn't able to handle such a case (at this time).Simply refresh the page to continue using the app."
                       ),

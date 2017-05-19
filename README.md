@@ -4,7 +4,7 @@
 
 This is a data analysis writeup (as of 10/09/15) for the R [Shiny][] application - **Power to Choose (PTC)**, built to visualize *up-to-date* electricity plans and prices in the [ERCOT][] utility market.
 
-The project is hosted on an [Shinyapps][] and all code and implementation are available on 
+The project is hosted on [Shinyapps][] and all code and implementation are available on 
 [Github][github].
 
 ------
